@@ -5,7 +5,7 @@ import 'package:another_quickbase/another_quickbase_models.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-
+import 'package:vector_math/vector_math.dart' as math;
 import 'app_keys.dart';
 
 void main() {
@@ -15,16 +15,135 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
+  final bool isDark = false;
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'Oleen Ohana',
+      theme: toThemeData(),
+      /*ThemeData(
+        primarySwatch: Colors.cyan,
+      )*/
+      home: const MyHomePage(title: 'Oleen Ohana'),
     );
+  }
+
+  ThemeData toThemeData() {
+    var accent1 = const Color(0xFFfaac64);
+    var bg1 = const Color(0xFFa3dec9);
+    var surface1 = const Color(0xFFfaac64); //Colors.white;
+    var mainTextColor = isDark ? Colors.white : Colors.black;
+    var greyStrong = const Color(0xFF131A22);
+    var inverseTextColor = !isDark ? Colors.black : Colors.white;
+    var focus = const Color(0xFF4ac3be);
+    var grey = const Color(0xff999999);
+    var textTheme = (!isDark ? ThemeData.dark() : ThemeData.light()).textTheme;
+    ColorScheme scheme = ColorScheme(
+        brightness: isDark ? Brightness.dark : Brightness.light,
+        primary: accent1,
+        primaryVariant: shift(accent1, .1),
+        secondary: accent1,
+        secondaryVariant: shift(accent1, .1),
+        background: bg1,
+        surface: surface1,
+        onBackground: mainTextColor,
+        onSurface: mainTextColor,
+        onError: mainTextColor,
+        onPrimary: greyStrong,
+        onSecondary: inverseTextColor,
+        error: Colors.black);
+
+    var t = ThemeData.from(
+        // Use the .dark() and .light() constructors to handle the text themes
+        textTheme: _buildTextTheme(textTheme),
+        // Use ColorScheme to generate the bulk of the color theme
+        colorScheme: scheme);
+
+    t = t.copyWith(
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ),
+        accentIconTheme: IconThemeData(
+          color: Colors.white,
+        ),
+        primaryIconTheme: IconThemeData(
+          color: Colors.white,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+            isDense: true,
+            filled: true,
+            fillColor: surface1,
+            labelStyle: TextStyle(
+              fontStyle: FontStyle.italic,
+              color: Colors.black.withAlpha(200),
+            ),
+            focusedErrorBorder:
+                OutlineInputBorder(borderSide: BorderSide(color: accent1)),
+            focusedBorder:
+                OutlineInputBorder(borderSide: BorderSide(color: accent1)),
+            errorBorder:
+                OutlineInputBorder(borderSide: BorderSide(color: accent1)),
+            enabledBorder:
+                OutlineInputBorder(borderSide: BorderSide(color: greyStrong))),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: grey,
+          selectionHandleColor: Colors.transparent,
+          selectionColor: grey,
+        ),
+        snackBarTheme: t.snackBarTheme.copyWith(
+            backgroundColor: greyStrong,
+            actionTextColor: accent1,
+            contentTextStyle: t.textTheme.caption!.copyWith(color: accent1)),
+        scaffoldBackgroundColor: bg1,
+        highlightColor: shift(accent1, .1),
+        toggleableActiveColor: accent1,
+        outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(side: BorderSide(color: accent1))));
+    // All done, return the ThemeData
+    return t;
+  }
+
+  /// This will add luminance in dark mode, and remove it in light.
+  // Allows the view to just make something "stronger" or "weaker" without worrying what the current theme brightness is
+  //      color = theme.shift(someColor, .1); //-10% lum in dark mode, +10% in light mode
+  Color shift(Color c, double amt) {
+    amt *= (isDark ? -1 : 1);
+    var hslc = HSLColor.fromColor(c); // Convert to HSL
+    double lightness =
+        (hslc.lightness + amt).clamp(0, 1.0) as double; // Add/Remove lightness
+    return hslc.withLightness(lightness).toColor(); // Convert back to Color
+  }
+
+  TextTheme _buildTextTheme(TextTheme base) {
+    return base
+        .copyWith(
+          bodyText2: GoogleFonts.robotoCondensed(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            //letterSpacing: letterSpacingOrNone(0.5),
+          ),
+          bodyText1: GoogleFonts.eczar(
+            fontSize: 40,
+            fontWeight: FontWeight.w400,
+            //letterSpacing: letterSpacingOrNone(1.4),
+          ),
+          button: GoogleFonts.robotoCondensed(
+            fontWeight: FontWeight.w700,
+            //letterSpacing: letterSpacingOrNone(2.8),
+          ),
+          headline5: GoogleFonts.eczar(
+            fontSize: 40,
+            fontWeight: FontWeight.w600,
+            //letterSpacing: letterSpacingOrNone(1.4),
+          ),
+        )
+        .apply(
+          displayColor: Colors.black,
+          bodyColor: Colors.black,
+        );
   }
 }
 
@@ -43,10 +162,9 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _clientReady = false;
   int _recordsPerPage = 10;
 
-  final _formKey = GlobalKey<FormState> ();
+  final _formKey = GlobalKey<FormState>();
   static const String _kDefaultState = 'HI';
   CustomerAddress? _activeCustomer;
-  //String? _firstName, _lastName, _streetLine, _state = _kDefaultState, _city, _errorMessage;
 
   QuickBaseClient client = QuickBaseClient(
       qBRealmHostname: AppKeys.quickbaseRealm,
@@ -87,7 +205,12 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text(widget.title),
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(40),
+                  bottomRight: Radius.circular(40))),
+          title: Text(widget.title,
+              style: GoogleFonts.loveYaLikeASister(fontSize: 30)),
         ),
         body: Center(
             child: _buildLargeContactsView(
@@ -103,20 +226,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     key: const ObjectKey("print"),
                     onPressed: () {
                       // TODO Print a label for every selected customer.
-                      //_deleteContact(customer: _selectedCustomers.single);
-                      _showUpdateCustomerDialog(customerToEdit: _selectedCustomers.single);
                     },
                     tooltip: 'Print',
                     child: const Icon(Icons.print))
                 : FloatingActionButton(
                     key: const ObjectKey("add"),
                     onPressed: () {
-                      // TODO open dialog to enter new customer.
+                      // Open dialog to enter new customer.
                       _showCustomerEntryDialog();
                     },
                     tooltip: 'Add Customer',
                     child: const Icon(Icons
-                        .add)) // This trailing comma makes auto-formatting nicer for build methods.
+                        .person_add)) // This trailing comma makes auto-formatting nicer for build methods.
             ));
   }
 
@@ -133,18 +254,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
     RecordsQueryResponse contacts = await client.runQuery(
         request: RecordsQueryRequest(
-          select: [3, 6, 7, 9, 11, 12],
+            select: [3, 6, 7, 9, 11, 12],
             from: contactTable.id!,
-            options:
-                RecordsQueryOptions(
-                    skip: page, top: pageSize)));
+            options: RecordsQueryOptions(skip: page, top: pageSize)));
 
     print("contacts: $contacts");
     int index = 0;
     List<CustomerAddress> customers = contacts.data?.map((item) {
-      ++index;
-      return CustomerAddress(
-            recordId: item["3"]["value"],
+          ++index;
+          return CustomerAddress(
+              recordId: item["3"]["value"],
               firstName: "${item["6"]["value"]}",
               lastName: "${item["7"]["value"]}",
               streetLine: "${item["9"]["value"]}",
@@ -153,7 +272,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }).toList() ??
         List<CustomerAddress>.empty();
 
-    print ("customers $customers");
+    print("customers $customers");
     return customers;
   }
 
@@ -215,7 +334,6 @@ class _MyHomePageState extends State<MyHomePage> {
         _selectedCustomers.remove(customer);
       });
     }
-
   }
 
   ///
@@ -239,9 +357,7 @@ class _MyHomePageState extends State<MyHomePage> {
             data: data,
             fieldsToReturn: [6, 7, 9, 11, 12]));
 
-    setState(() {
-
-    });
+    setState(() {});
   }
 
   Widget _buildLargeContactsView(BuildContext context) {
@@ -269,6 +385,14 @@ class _MyHomePageState extends State<MyHomePage> {
       {required int index, required CustomerAddress customer}) {
     return ContactRowView(
       customer: customer,
+      onLongPress: () {
+        // Open update dialog
+        _showUpdateCustomerDialog(customerToEdit: customer);
+      },
+      onDeleteTap: () {
+        // TODO Consider opening a dialog.
+        _deleteContact(customer: customer);
+      },
       onTap: () {
         setState(() {
           customer.isSelected = !customer.isSelected;
@@ -282,7 +406,10 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _createCustomerForm({required BuildContext context, bool isUpdate = false, required StateSetter setState}) {
+  Widget _createCustomerForm(
+      {required BuildContext context,
+      bool isUpdate = false,
+      required StateSetter setState}) {
     ThemeData mainTheme = Theme.of(context);
     return Form(
         key: _formKey,
@@ -338,27 +465,58 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(
               height: 8,
             ),
-            DropdownButton<String>(
+            DropdownButtonFormField<String>(
               isExpanded: true,
               value: _activeCustomer?.state?.toUpperCase(),
               icon: const Icon(Icons.arrow_downward),
               elevation: 16,
-              style: TextStyle(color: mainTheme.colorScheme.secondary),
-              underline: Container(
-                height: 2,
-                color: mainTheme.colorScheme.secondary,
-              ),
+              style: TextStyle(color: mainTheme.colorScheme.onSecondary),
               onChanged: (String? newValue) {
                 setState(() {
                   print("Staet selected $newValue");
                   _activeCustomer?.state = newValue!;
                 });
               },
-              items: <String>['AL', 'AK', 'AZ', 'AR', 'AS', 'CA', 'CO', 'CT',
-                'DE', 'DC', 'FL', 'GA', 'GU', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'OH',
-              'OK', 'OR', 'PA', 'PR', 'RI', 'SC', 'SD', 'TN', 'TX', 'TT', 'UT', 'VT',
-              'VA', 'VI', 'WA', 'WV', 'WI', 'WY']
-                  .map<DropdownMenuItem<String>>((String value) {
+              items: <String>[
+                'AL',
+                'AK',
+                'AZ',
+                'AR',
+                'AS',
+                'CA',
+                'CO',
+                'CT',
+                'DE',
+                'DC',
+                'FL',
+                'GA',
+                'GU',
+                'HI',
+                'ID',
+                'IL',
+                'IN',
+                'IA',
+                'KS',
+                'OH',
+                'OK',
+                'OR',
+                'PA',
+                'PR',
+                'RI',
+                'SC',
+                'SD',
+                'TN',
+                'TX',
+                'TT',
+                'UT',
+                'VT',
+                'VA',
+                'VI',
+                'WA',
+                'WV',
+                'WI',
+                'WY'
+              ].map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -388,7 +546,7 @@ class _MyHomePageState extends State<MyHomePage> {
               padding: const EdgeInsets.only(top: 16.0),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(40), // NEW
+                  minimumSize: const Size.fromHeight(48), // NEW
                 ),
                 onPressed: () {
                   // Validate returns true if the form is valid, or false otherwise.
@@ -396,7 +554,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     Navigator.pop(context, _activeCustomer);
                   }
                 },
-                child:isUpdate ? const Text('Update')
+                child: isUpdate
+                    ? const Text('Update')
                     : const Text("Add Customer"),
               ),
             ),
@@ -405,8 +564,76 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
   }
 
+  Future<CustomerAddress?> _showBaseCustomerDialog({bool isUpdate = false}) {
+    return showGeneralDialog<CustomerAddress?>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "Barrier",
+      transitionDuration: const Duration(milliseconds: 500),
+      pageBuilder: (context, anim1, anim2) {
+        return Container();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        final curvedValue = Curves.easeInOutBack.transform(anim1.value) - 1.0;
+        return Transform(
+            transform: Matrix4.translationValues(0.0, curvedValue * 200, 0.0),
+            child: Opacity(
+              opacity: anim1.value,
+              child: Dialog(
+                  backgroundColor: Colors.transparent,
+                  child:
+              StatefulBuilder(builder: (context, StateSetter setState) {
+                ThemeData theme = Theme.of(context);
+                return Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top:50.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.background,
+                          borderRadius: BorderRadius.circular(8)
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom:16.0, top:60),
+                          child: SizedBox(
+                              width: 400,
+                              child: _createCustomerForm(
+                                  context: context, setState: setState, isUpdate: isUpdate)),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              image: DecorationImage(
+                                  image: AssetImage("assets/images/coconut.png"),
+                                  fit: BoxFit.fill
+                              ),
+
+                          ),
+
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              })),
+            ));
+      },
+    );
+  }
+
   Future _showCustomerEntryDialog() async {
     _activeCustomer = CustomerAddress(state: _kDefaultState);
+    CustomerAddress? customer = await _showBaseCustomerDialog();
+
+    /*
     CustomerAddress? customer = await showDialog<CustomerAddress?>(
       context: context,
       builder: (BuildContext context) {
@@ -422,28 +649,17 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
       },
     );
+
+     */
     if (customer != null) {
       await _addContact(customer: customer);
     }
   }
 
-  Future _showUpdateCustomerDialog({required CustomerAddress customerToEdit}) async {
+  Future _showUpdateCustomerDialog(
+      {required CustomerAddress customerToEdit}) async {
     _activeCustomer = customerToEdit.copyWidth();
-    CustomerAddress? customer = await showDialog<CustomerAddress?>(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(child: StatefulBuilder(
-            builder: (context, StateSetter setState) {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SizedBox(
-                    width: 400,
-                    child: _createCustomerForm(context: context, setState: setState, isUpdate: true)),
-              );
-            }
-        ));
-      },
-    );
+    CustomerAddress? customer = await _showBaseCustomerDialog(isUpdate: true);
     if (customer != null) {
       customerToEdit.firstName = customer.firstName;
       customerToEdit.lastName = customer.lastName;
@@ -455,6 +671,13 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  ///
+  /// Prints the labels to using a Brother Printers.
+  Future<void> _printLabels(
+      {required List<CustomerAddress> customersToPrint}) async {
+    // TODO Print to a brother printer.
+  }
+
   bool isValidEntry(String? value) {
     return value?.isNotEmpty == true;
   }
@@ -464,9 +687,14 @@ class ContactRowView extends StatelessWidget {
   final CustomerAddress customer;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onDeleteTap;
 
   const ContactRowView(
-      {Key? key, required this.customer, this.onTap, this.onLongPress})
+      {Key? key,
+      required this.customer,
+      this.onTap,
+      this.onLongPress,
+      this.onDeleteTap})
       : super(key: key);
 
   @override
@@ -486,24 +714,40 @@ class ContactRowView extends StatelessWidget {
             colorFilter: ColorFilter.mode(color!, BlendMode.modulate),
           );
         },
-        child: Card(
-          clipBehavior: Clip.antiAliasWithSaveLayer,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  customer.nameLine,
-                  style: GoogleFonts.vibur(fontSize: 20),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Card(
+              clipBehavior: Clip.antiAliasWithSaveLayer,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      customer.nameLine,
+                      style: GoogleFonts.vibur(fontSize: 20),
+                    ),
+                    Text(customer.streetLine!, style: GoogleFonts.vibur()),
+                    Text(customer.stateLine, style: GoogleFonts.vibur()),
+                  ],
                 ),
-                Text(customer.streetLine!, style: GoogleFonts.vibur()),
-                Text(customer.stateLine, style: GoogleFonts.vibur()),
-              ],
+              ),
             ),
-          ),
+            if (customer.isSelected) ...[
+              Positioned(
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: onDeleteTap,
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Icon(Icons.close),
+                    ),
+                  ))
+            ]
+          ],
         ),
       ),
     );
@@ -520,9 +764,8 @@ class CustomerAddress {
   bool isSelected;
 
   CustomerAddress(
-      {
-        this.recordId,
-        this.city,
+      {this.recordId,
+      this.city,
       this.state,
       this.streetLine,
       this.firstName,
@@ -533,23 +776,24 @@ class CustomerAddress {
 
   String get stateLine => "$city,$state";
 
-  CustomerAddress copyWidth({int? recordId,
-  String? firstName,
-  String? lastName,
-  String? streetLine,
-  String? city,
-  String? state,
-  bool? isSelected}) {
-  return CustomerAddress(
-    recordId: recordId ?? this.recordId,
-    firstName: firstName ?? this.firstName,
-    lastName: lastName ?? this.lastName,
-    streetLine: streetLine ?? this.streetLine,
-    city: city ?? this.city,
-    state: state ?? this.state,
-    isSelected: isSelected ?? this.isSelected
-  );
-}
+  CustomerAddress copyWidth(
+      {int? recordId,
+      String? firstName,
+      String? lastName,
+      String? streetLine,
+      String? city,
+      String? state,
+      bool? isSelected}) {
+    return CustomerAddress(
+        recordId: recordId ?? this.recordId,
+        firstName: firstName ?? this.firstName,
+        lastName: lastName ?? this.lastName,
+        streetLine: streetLine ?? this.streetLine,
+        city: city ?? this.city,
+        state: state ?? this.state,
+        isSelected: isSelected ?? this.isSelected);
+  }
+
   @override
   String toString() {
     return "$recordId: $nameLine $stateLine";
