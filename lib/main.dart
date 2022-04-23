@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      //debugShowCheckedModeBanner: false,
       title: 'Oleen Ohana',
       theme: toThemeData(),
       /*ThemeData(
@@ -102,7 +102,8 @@ class MyApp extends StatelessWidget {
         snackBarTheme: t.snackBarTheme.copyWith(
             backgroundColor: accent1,
             actionTextColor: mainTextColor,
-            contentTextStyle: t.textTheme.caption!.copyWith(color: mainTextColor)),
+            contentTextStyle:
+                t.textTheme.caption!.copyWith(color: mainTextColor)),
         scaffoldBackgroundColor: bg1,
         highlightColor: shift(accent1, .1),
         toggleableActiveColor: accent1,
@@ -302,20 +303,20 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
   ///
   Future<void> _deleteContact({required CustomerAddress customer}) async {
     bool? delete = await _showBaseConfirmationDialogDialog(
-        body:
-            RichText(
-              text: TextSpan(
-                text: 'Delete customer  ',
-                style: Theme.of(context).textTheme.bodyText2,
-                children: <TextSpan>[
-                  TextSpan(text: "${customer.firstName} ${customer.lastName} ", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const TextSpan(text: "?"),
-
-                ],
-              ),
-            ),
-        positive: "Delete",
-        );
+      body: RichText(
+        text: TextSpan(
+          text: 'Delete customer  ',
+          style: Theme.of(context).textTheme.bodyText2,
+          children: <TextSpan>[
+            TextSpan(
+                text: "${customer.firstName} ${customer.lastName} ",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const TextSpan(text: "?"),
+          ],
+        ),
+      ),
+      positive: "Delete",
+    );
 
     if (delete != true) {
       return;
@@ -373,7 +374,8 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
     setState(() {});
   }
 
-  Future<ui.Image> _generateContactLabel({required CustomerAddress customer}) async {
+  Future<ui.Image> _generateContactLabel(
+      {required CustomerAddress customer}) async {
     ui.PictureRecorder recorder = ui.PictureRecorder();
     Canvas canvas = Canvas(recorder);
 
@@ -385,20 +387,32 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
     double titleFontSize = 50;
     double sublinesFontSize = 35;
     // Create Paragraph
-    ui.ParagraphBuilder paraBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.center));
-
+    ui.ParagraphBuilder paraBuilder =
+        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.center));
 
     var labelFontStyle = kLabelTextStyle;
     // Add heading to paragraph
-    paraBuilder.pushStyle(ui.TextStyle(fontFamily: labelFontStyle.fontFamily, fontSize: titleFontSize, color: Colors.black, fontWeight: FontWeight.bold));
+    paraBuilder.pushStyle(ui.TextStyle(
+        fontFamily: labelFontStyle.fontFamily,
+        fontSize: titleFontSize,
+        color: Colors.black,
+        fontWeight: FontWeight.bold));
     paraBuilder.addText("${customer.nameLine}");
     paraBuilder.pop();
 
-    paraBuilder.pushStyle(ui.TextStyle(fontFamily: labelFontStyle.fontFamily, fontSize: sublinesFontSize, color: Colors.black, fontWeight: FontWeight.bold));
+    paraBuilder.pushStyle(ui.TextStyle(
+        fontFamily: labelFontStyle.fontFamily,
+        fontSize: sublinesFontSize,
+        color: Colors.black,
+        fontWeight: FontWeight.bold));
     paraBuilder.addText("\n${customer.streetLine}");
     paraBuilder.pop();
 
-    paraBuilder.pushStyle(ui.TextStyle(fontFamily: labelFontStyle.fontFamily, fontSize: sublinesFontSize, color: Colors.black, fontWeight: FontWeight.bold));
+    paraBuilder.pushStyle(ui.TextStyle(
+        fontFamily: labelFontStyle.fontFamily,
+        fontSize: sublinesFontSize,
+        color: Colors.black,
+        fontWeight: FontWeight.bold));
     paraBuilder.addText("\n${customer.stateLine}");
     paraBuilder.pop();
 
@@ -413,17 +427,19 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
     canvas.drawRect(bounds, paint);
 
     // Draw paragraph on canvas.
-    Offset paraOffset = Offset(0, (labelHeightPx - infoPara.height)/2.0);
+    Offset paraOffset = Offset(0, (labelHeightPx - infoPara.height) / 2.0);
     canvas.drawParagraph(infoPara, paraOffset);
 
-    var picture = await recorder.endRecording().toImage(labelWidthPx.toInt(), labelHeightPx.toInt());
+    var picture = await recorder
+        .endRecording()
+        .toImage(labelWidthPx.toInt(), labelHeightPx.toInt());
 
     return picture;
   }
 
   Widget _buildLargeContactsView(BuildContext context) {
     return PagedGridView(
-        padding: const EdgeInsets.only(left: 16, right:16),
+        padding: const EdgeInsets.only(left: 16, right: 16),
         pagingController: _pagingController,
         builderDelegate: PagedChildBuilderDelegate<CustomerAddress>(
           itemBuilder: (context, item, index) =>
@@ -647,7 +663,10 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
                   child: Padding(
                     padding: const EdgeInsets.only(
                         left: 16.0, right: 16.0, bottom: 16.0, top: 60),
-                    child: SizedBox(width: 400, child: child),
+                    child: SizedBox(
+                            width: 400,
+                            child: SingleChildScrollView(child: child)
+                    ),
                   ),
                 ),
               ),
@@ -712,9 +731,7 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
   }
 
   Future<bool?> _showBaseConfirmationDialogDialog(
-      {required Widget body,
-      required String positive
-      }) {
+      {required Widget body, required String positive}) {
     return showGeneralDialog<bool?>(
       context: context,
       barrierDismissible: true,
@@ -731,30 +748,16 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
                 opacity: anim1.value,
                 child: _buildBaseDialogBody(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     body,
-                    const SizedBox(height: 16,),
+                    const SizedBox(
+                      height: 16,
+                    ),
                     Row(
                       mainAxisSize: MainAxisSize.max,
-
                       children: [
-                        /*
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48), // NEW
-                            ),
-                            onPressed: () {
-                              // Validate returns true if the form is valid, or false otherwise.
-                              Navigator.pop(context, false);
-                            },
-                            child: Text(negative),
-                          ),
-                        ),
-                        const SizedBox(width: 16,),
-                         */
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -786,36 +789,48 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
     for (var element in customersToPrint) {
       ui.Image image = await _generateContactLabel(customer: element);
       preview.add(image);
-      previewBytes.add((await image.toByteData(format: ImageByteFormat.png))!.buffer.asUint8List());
+      previewBytes.add((await image.toByteData(format: ImageByteFormat.png))!
+          .buffer
+          .asUint8List());
     }
     // Show dialog with preview
-    bool? shouldPrint = await _showBaseConfirmationDialogDialog(body: LayoutBuilder(
-      builder: (context, constraints) {
-        return ClipRRect(
+    bool? shouldPrint = await _showBaseConfirmationDialogDialog(
+        body: LayoutBuilder(builder: (context, constraints) {
+          bool hasMore = preview.length.toDouble() > 3;
+          return ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Container(
-            height: min(preview.length.toDouble(), 3) * constraints.maxWidth * kLabelHeight / kLabelWidth,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondary,
+              height: min(preview.length.toDouble(), 3) *
+                  constraints.maxWidth *
+                  kLabelHeight /
+                  kLabelWidth  + (hasMore ? 8 : 0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(0),
+                  separatorBuilder: (context, index) {
+                    return const Divider(
+                      height: 1,
+                    );
+                  },
+                  itemCount: previewBytes.length,
+                  itemBuilder: (context, index) {
+                    return Image.memory(
+                      previewBytes[index],
+                      fit: BoxFit.fill,
+                    );
+                  }),
             ),
-            child: ListView.separated(
-              separatorBuilder: (context, index) {
-                return const Divider(height: 1,);
-              },
-                itemCount: previewBytes.length,
-                itemBuilder: (context, index) {
-              return Image.memory(previewBytes[index], fit: BoxFit.fill,);
-            }),
-          ),
-        );
-      }
-    ), positive: "Print");
+          );
+        }),
+        positive: "Print");
 
     if (shouldPrint != true) {
       // Don't print
       return;
     }
-    
+
     // TODO Check if we are not on mobile and display snackbar.
     if (!(UniversalPlatform.isIOS || UniversalPlatform.isAndroid)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -826,7 +841,7 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
       ));
       return;
     }
-    
+
     // Configure printer.
     //////////////////////////////////////////////////
     /// Request the Storage permissions required by
@@ -863,7 +878,8 @@ class _MyHomePageState extends State<MyHomePage> with OleenLogo {
     await printer.setPrinterInfo(printInfo);
 
     // Get a list of printers with my model available in the network.
-    List<abPi.BluetoothPrinter> printers = await printer.getBluetoothPrinters([abPi.Model.QL_1110NWB.getName()]);
+    List<abPi.BluetoothPrinter> printers =
+        await printer.getBluetoothPrinters([abPi.Model.QL_1110NWB.getName()]);
 
     if (printers.isEmpty) {
       // Show a message if no printers are found.
@@ -933,9 +949,11 @@ class ContactRowView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      customer.nameLine,
-                      style: kLabelTextStyle.copyWith(fontSize: 20),
+                    Expanded(
+                      child: Text(
+                        customer.nameLine,
+                        style: kLabelTextStyle.copyWith(fontSize: 20),
+                      ),
                     ),
                     Text(customer.streetLine!, style: kLabelTextStyle),
                     Text(customer.stateLine, style: kLabelTextStyle),
@@ -971,7 +989,7 @@ class OleenAppBar extends StatelessWidget with PreferredSizeWidget, OleenLogo {
     return Stack(
       children: [
         AppBar(
-          centerTitle:true,
+          centerTitle: true,
           shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(60),
