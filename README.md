@@ -1,6 +1,6 @@
 # Oleen Ohana
 
-A Flutter project for the Brother Hackathon 20220. 
+A Flutter project for the Brother Hackathon 2022. 
 
 ## Mini-Hackathon #4. 
 
