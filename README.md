@@ -1,16 +1,21 @@
-# oleen_ohana
+# Oleen Ohana
 
-A new Flutter project.
+A Flutter project for the Brother Hackathon 20220. 
 
-## Getting Started
+## Mini-Hackathon #4. 
 
-This project is a starting point for a Flutter application.
+Oleen (the “joyous”) runs a specialty tour on the island of Oahu. Her
+mellifluous voice and excellent customer relationship skills earned her
+referrals and repeat businesses. Her secret is to treat everyone like her
+"ohana," or family. Her challenge is to keep track of her growing family and
+always remember to send her customer a coconut-scented air freshener!
 
-A few resources to get you started if this is your first Flutter project:
+Can you help Oleen? She will show you the impasse to paradise!
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+# Brother Hackathon
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Feel free to use any of my GitHub repositories in your apps. You should also consider
+attending the free Brother Hackathon happening this year. You get a free Brother QL-1110NWB,
+a PT-P910BT, and possibly an awesome DS-940DW mobile scanner. Visit brotherhackathon.com for
+more information. I will be teaching workshops, and they are free. You can ask me any questions.
+Thank you.
