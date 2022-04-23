@@ -1,12 +1,22 @@
+import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:another_brother/label_info.dart';
+import 'package:another_brother/printer_info.dart' as abPi;
 import 'package:another_quickbase/another_quickbase.dart';
 import 'package:another_quickbase/another_quickbase_models.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:vector_math/vector_math.dart' as math;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:universal_platform/universal_platform.dart';
 import 'app_keys.dart';
+import 'dart:ui' as ui;
+
+const double kLabelWidth = 90.3;
+const double kLabelHeight = 29;
+TextStyle kLabelTextStyle = GoogleFonts.vibur();
 
 void main() {
   runApp(const MyApp());
@@ -21,6 +31,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Oleen Ohana',
       theme: toThemeData(),
       /*ThemeData(
@@ -37,15 +48,13 @@ class MyApp extends StatelessWidget {
     var mainTextColor = isDark ? Colors.white : Colors.black;
     var greyStrong = const Color(0xFF131A22);
     var inverseTextColor = !isDark ? Colors.black : Colors.white;
-    var focus = const Color(0xFF4ac3be);
+    //var focus = const Color(0xFF4ac3be);
     var grey = const Color(0xff999999);
     var textTheme = (!isDark ? ThemeData.dark() : ThemeData.light()).textTheme;
     ColorScheme scheme = ColorScheme(
         brightness: isDark ? Brightness.dark : Brightness.light,
         primary: accent1,
-        primaryVariant: shift(accent1, .1),
         secondary: accent1,
-        secondaryVariant: shift(accent1, .1),
         background: bg1,
         surface: surface1,
         onBackground: mainTextColor,
@@ -62,13 +71,10 @@ class MyApp extends StatelessWidget {
         colorScheme: scheme);
 
     t = t.copyWith(
-        iconTheme: IconThemeData(
+        iconTheme: const IconThemeData(
           color: Colors.white,
         ),
-        accentIconTheme: IconThemeData(
-          color: Colors.white,
-        ),
-        primaryIconTheme: IconThemeData(
+        primaryIconTheme: const IconThemeData(
           color: Colors.white,
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -94,9 +100,9 @@ class MyApp extends StatelessWidget {
           selectionColor: grey,
         ),
         snackBarTheme: t.snackBarTheme.copyWith(
-            backgroundColor: greyStrong,
-            actionTextColor: accent1,
-            contentTextStyle: t.textTheme.caption!.copyWith(color: accent1)),
+            backgroundColor: accent1,
+            actionTextColor: mainTextColor,
+            contentTextStyle: t.textTheme.caption!.copyWith(color: mainTextColor)),
         scaffoldBackgroundColor: bg1,
         highlightColor: shift(accent1, .1),
         toggleableActiveColor: accent1,
@@ -155,12 +161,11 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with OleenLogo {
   final PagingController<int, CustomerAddress> _pagingController =
       PagingController(firstPageKey: 0);
   final List<CustomerAddress> _selectedCustomers = List.empty(growable: true);
-  bool _clientReady = false;
-  int _recordsPerPage = 10;
+  final int _recordsPerPage = 10;
 
   final _formKey = GlobalKey<FormState>();
   static const String _kDefaultState = 'HI';
@@ -190,7 +195,6 @@ class _MyHomePageState extends State<MyHomePage> {
         _pagingController.appendPage(newItems, nextPageKey);
       }
     } catch (error) {
-      print("Error: $error");
       _pagingController.error = error;
     }
   }
@@ -204,13 +208,8 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40))),
-          title: Text(widget.title,
-              style: GoogleFonts.loveYaLikeASister(fontSize: 30)),
+        appBar: OleenAppBar(
+          title: widget.title,
         ),
         body: Center(
             child: _buildLargeContactsView(
@@ -225,7 +224,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 ? FloatingActionButton(
                     key: const ObjectKey("print"),
                     onPressed: () {
-                      // TODO Print a label for every selected customer.
+                      // Print a label for every selected customer.
+                      _printLabels(customersToPrint: _selectedCustomers);
                     },
                     tooltip: 'Print',
                     child: const Icon(Icons.print))
@@ -258,10 +258,7 @@ class _MyHomePageState extends State<MyHomePage> {
             from: contactTable.id!,
             options: RecordsQueryOptions(skip: page, top: pageSize)));
 
-    print("contacts: $contacts");
-    int index = 0;
     List<CustomerAddress> customers = contacts.data?.map((item) {
-          ++index;
           return CustomerAddress(
               recordId: item["3"]["value"],
               firstName: "${item["6"]["value"]}",
@@ -272,7 +269,6 @@ class _MyHomePageState extends State<MyHomePage> {
         }).toList() ??
         List<CustomerAddress>.empty();
 
-    print("customers $customers");
     return customers;
   }
 
@@ -305,9 +301,27 @@ class _MyHomePageState extends State<MyHomePage> {
   /// Deletes the specified record from the contacts table.
   ///
   Future<void> _deleteContact({required CustomerAddress customer}) async {
-    var queryBuffer = StringBuffer();
-    print("Trying to delete recordId ${customer.recordId}");
+    bool? delete = await _showBaseConfirmationDialogDialog(
+        body:
+            RichText(
+              text: TextSpan(
+                text: 'Delete customer  ',
+                style: Theme.of(context).textTheme.bodyText2,
+                children: <TextSpan>[
+                  TextSpan(text: "${customer.firstName} ${customer.lastName} ", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const TextSpan(text: "?"),
 
+                ],
+              ),
+            ),
+        positive: "Delete",
+        );
+
+    if (delete != true) {
+      return;
+    }
+
+    var queryBuffer = StringBuffer();
     queryBuffer.write("{'3'.EX.'${customer.recordId}'}");
     /*
     queryBuffer.write("AND");
@@ -327,7 +341,6 @@ class _MyHomePageState extends State<MyHomePage> {
         request: RecordsDeleteRequest(
             from: AppKeys.quickbaseContactTableId, where: where));
 
-    print("Deleted Count $deletedCount");
     if (deletedCount > 0) {
       setState(() {
         _pagingController.itemList?.remove(customer);
@@ -360,15 +373,66 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {});
   }
 
+  Future<ui.Image> _generateContactLabel({required CustomerAddress customer}) async {
+    ui.PictureRecorder recorder = ui.PictureRecorder();
+    Canvas canvas = Canvas(recorder);
+
+    double baseSize = 500;
+    double labelWidthPx = baseSize;
+    double labelHeightPx = baseSize * kLabelHeight / kLabelWidth;
+    //double qrSizePx = labelHeightPx / 2;
+
+    double titleFontSize = 50;
+    double sublinesFontSize = 35;
+    // Create Paragraph
+    ui.ParagraphBuilder paraBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.center));
+
+
+    var labelFontStyle = kLabelTextStyle;
+    // Add heading to paragraph
+    paraBuilder.pushStyle(ui.TextStyle(fontFamily: labelFontStyle.fontFamily, fontSize: titleFontSize, color: Colors.black, fontWeight: FontWeight.bold));
+    paraBuilder.addText("${customer.nameLine}");
+    paraBuilder.pop();
+
+    paraBuilder.pushStyle(ui.TextStyle(fontFamily: labelFontStyle.fontFamily, fontSize: sublinesFontSize, color: Colors.black, fontWeight: FontWeight.bold));
+    paraBuilder.addText("\n${customer.streetLine}");
+    paraBuilder.pop();
+
+    paraBuilder.pushStyle(ui.TextStyle(fontFamily: labelFontStyle.fontFamily, fontSize: sublinesFontSize, color: Colors.black, fontWeight: FontWeight.bold));
+    paraBuilder.addText("\n${customer.stateLine}");
+    paraBuilder.pop();
+
+    ui.Paragraph infoPara = paraBuilder.build();
+    // Layout the pargraph in the remaining space.
+    infoPara.layout(ui.ParagraphConstraints(width: labelWidthPx));
+
+    Paint paint = Paint();
+    paint.color = const Color.fromRGBO(255, 255, 255, 1);
+    Rect bounds = Rect.fromLTWH(0, 0, labelWidthPx, labelHeightPx);
+    canvas.save();
+    canvas.drawRect(bounds, paint);
+
+    // Draw paragraph on canvas.
+    Offset paraOffset = Offset(0, (labelHeightPx - infoPara.height)/2.0);
+    canvas.drawParagraph(infoPara, paraOffset);
+
+    var picture = await recorder.endRecording().toImage(labelWidthPx.toInt(), labelHeightPx.toInt());
+
+    return picture;
+  }
+
   Widget _buildLargeContactsView(BuildContext context) {
     return PagedGridView(
+        padding: const EdgeInsets.only(left: 16, right:16),
         pagingController: _pagingController,
         builderDelegate: PagedChildBuilderDelegate<CustomerAddress>(
           itemBuilder: (context, item, index) =>
               _createContactCard(index: index, customer: item),
         ),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4, childAspectRatio: 90.3 / 29));
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            mainAxisExtent: 300 * kLabelHeight / kLabelWidth,
+            maxCrossAxisExtent: 300,
+            childAspectRatio: kLabelWidth / kLabelHeight));
   }
 
   Widget _buildSmallContactsView(BuildContext context) {
@@ -465,63 +529,66 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(
               height: 8,
             ),
-            DropdownButtonFormField<String>(
-              isExpanded: true,
-              value: _activeCustomer?.state?.toUpperCase(),
-              icon: const Icon(Icons.arrow_downward),
-              elevation: 16,
-              style: TextStyle(color: mainTheme.colorScheme.onSecondary),
-              onChanged: (String? newValue) {
-                setState(() {
-                  print("Staet selected $newValue");
-                  _activeCustomer?.state = newValue!;
-                });
-              },
-              items: <String>[
-                'AL',
-                'AK',
-                'AZ',
-                'AR',
-                'AS',
-                'CA',
-                'CO',
-                'CT',
-                'DE',
-                'DC',
-                'FL',
-                'GA',
-                'GU',
-                'HI',
-                'ID',
-                'IL',
-                'IN',
-                'IA',
-                'KS',
-                'OH',
-                'OK',
-                'OR',
-                'PA',
-                'PR',
-                'RI',
-                'SC',
-                'SD',
-                'TN',
-                'TX',
-                'TT',
-                'UT',
-                'VT',
-                'VA',
-                'VI',
-                'WA',
-                'WV',
-                'WI',
-                'WY'
-              ].map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
+            Theme(
+              data: mainTheme.copyWith(
+                  canvasColor: mainTheme.colorScheme.secondary),
+              child: DropdownButtonFormField<String>(
+                isExpanded: true,
+                value: _activeCustomer?.state?.toUpperCase(),
+                icon: const Icon(Icons.arrow_downward),
+                elevation: 16,
+                style: TextStyle(color: mainTheme.colorScheme.onSecondary),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _activeCustomer?.state = newValue!;
+                  });
+                },
+                items: <String>[
+                  'AL',
+                  'AK',
+                  'AZ',
+                  'AR',
+                  'AS',
+                  'CA',
+                  'CO',
+                  'CT',
+                  'DE',
+                  'DC',
+                  'FL',
+                  'GA',
+                  'GU',
+                  'HI',
+                  'ID',
+                  'IL',
+                  'IN',
+                  'IA',
+                  'KS',
+                  'OH',
+                  'OK',
+                  'OR',
+                  'PA',
+                  'PR',
+                  'RI',
+                  'SC',
+                  'SD',
+                  'TN',
+                  'TX',
+                  'TT',
+                  'UT',
+                  'VT',
+                  'VA',
+                  'VI',
+                  'WA',
+                  'WV',
+                  'WI',
+                  'WY'
+                ].map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(
               height: 8,
@@ -564,6 +631,38 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
   }
 
+  Widget _buildBaseDialogBody({required Widget child}) {
+    return Dialog(
+        backgroundColor: Colors.transparent,
+        child: StatefulBuilder(builder: (context, StateSetter setState) {
+          ThemeData theme = Theme.of(context);
+          return Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 50.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: theme.colorScheme.background,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                        left: 16.0, right: 16.0, bottom: 16.0, top: 60),
+                    child: SizedBox(width: 400, child: child),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: buildAppLogo(width: 100, height: 100),
+                ),
+              ),
+            ],
+          );
+        }));
+  }
+
   Future<CustomerAddress?> _showBaseCustomerDialog({bool isUpdate = false}) {
     return showGeneralDialog<CustomerAddress?>(
       context: context,
@@ -579,51 +678,11 @@ class _MyHomePageState extends State<MyHomePage> {
             transform: Matrix4.translationValues(0.0, curvedValue * 200, 0.0),
             child: Opacity(
               opacity: anim1.value,
-              child: Dialog(
-                  backgroundColor: Colors.transparent,
-                  child:
-              StatefulBuilder(builder: (context, StateSetter setState) {
-                ThemeData theme = Theme.of(context);
-                return Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top:50.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.background,
-                          borderRadius: BorderRadius.circular(8)
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom:16.0, top:60),
-                          child: SizedBox(
-                              width: 400,
-                              child: _createCustomerForm(
-                                  context: context, setState: setState, isUpdate: isUpdate)),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              image: DecorationImage(
-                                  image: AssetImage("assets/images/coconut.png"),
-                                  fit: BoxFit.fill
-                              ),
-
-                          ),
-
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              })),
+              child: _buildBaseDialogBody(
+                  child: _createCustomerForm(
+                      context: context,
+                      setState: setState,
+                      isUpdate: isUpdate)),
             ));
       },
     );
@@ -632,25 +691,6 @@ class _MyHomePageState extends State<MyHomePage> {
   Future _showCustomerEntryDialog() async {
     _activeCustomer = CustomerAddress(state: _kDefaultState);
     CustomerAddress? customer = await _showBaseCustomerDialog();
-
-    /*
-    CustomerAddress? customer = await showDialog<CustomerAddress?>(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(child: StatefulBuilder(
-          builder: (context, StateSetter setState) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                  width: 400,
-                  child: _createCustomerForm(context: context, setState: setState)),
-            );
-          }
-        ));
-      },
-    );
-
-     */
     if (customer != null) {
       await _addContact(customer: customer);
     }
@@ -671,11 +711,178 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<bool?> _showBaseConfirmationDialogDialog(
+      {required Widget body,
+      required String positive
+      }) {
+    return showGeneralDialog<bool?>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "Barrier",
+      transitionDuration: const Duration(milliseconds: 500),
+      pageBuilder: (context, anim1, anim2) {
+        return Container();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        final curvedValue = Curves.easeInOutBack.transform(anim1.value) - 1.0;
+        return Transform(
+            transform: Matrix4.translationValues(0.0, curvedValue * 200, 0.0),
+            child: Opacity(
+                opacity: anim1.value,
+                child: _buildBaseDialogBody(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                  children: [
+                    body,
+                    const SizedBox(height: 16,),
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+
+                      children: [
+                        /*
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48), // NEW
+                            ),
+                            onPressed: () {
+                              // Validate returns true if the form is valid, or false otherwise.
+                              Navigator.pop(context, false);
+                            },
+                            child: Text(negative),
+                          ),
+                        ),
+                        const SizedBox(width: 16,),
+                         */
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48), // NEW
+                            ),
+                            onPressed: () {
+                              // Validate returns true if the form is valid, or false otherwise.
+                              Navigator.pop(context, true);
+                            },
+                            child: Text(positive),
+                          ),
+                        )
+                      ],
+                    )
+                  ],
+                ))));
+      },
+    );
+  }
+
   ///
   /// Prints the labels to using a Brother Printers.
+  ///
   Future<void> _printLabels(
       {required List<CustomerAddress> customersToPrint}) async {
-    // TODO Print to a brother printer.
+    // Create images
+    List<ui.Image> preview = List.empty(growable: true);
+    List<Uint8List> previewBytes = List.empty(growable: true);
+    for (var element in customersToPrint) {
+      ui.Image image = await _generateContactLabel(customer: element);
+      preview.add(image);
+      previewBytes.add((await image.toByteData(format: ImageByteFormat.png))!.buffer.asUint8List());
+    }
+    // Show dialog with preview
+    bool? shouldPrint = await _showBaseConfirmationDialogDialog(body: LayoutBuilder(
+      builder: (context, constraints) {
+        return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+            height: min(preview.length.toDouble(), 3) * constraints.maxWidth * kLabelHeight / kLabelWidth,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            child: ListView.separated(
+              separatorBuilder: (context, index) {
+                return const Divider(height: 1,);
+              },
+                itemCount: previewBytes.length,
+                itemBuilder: (context, index) {
+              return Image.memory(previewBytes[index], fit: BoxFit.fill,);
+            }),
+          ),
+        );
+      }
+    ), positive: "Print");
+
+    if (shouldPrint != true) {
+      // Don't print
+      return;
+    }
+    
+    // TODO Check if we are not on mobile and display snackbar.
+    if (!(UniversalPlatform.isIOS || UniversalPlatform.isAndroid)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Text("Printing is only supported on Mobile Devices."),
+        ),
+      ));
+      return;
+    }
+    
+    // Configure printer.
+    //////////////////////////////////////////////////
+    /// Request the Storage permissions required by
+    /// another_brother to print.
+    //////////////////////////////////////////////////
+    if (!await Permission.storage.request().isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Text("Access to storage is needed in order print."),
+        ),
+      ));
+      return;
+    }
+    //////////////////////////////////////////////////
+    /// Configure printer
+    /// Printer: QL1110NWB
+    /// Connection: Bluetooth
+    /// Paper Size: W62
+    /// Important: Printer must be paired to the
+    /// phone for the BT search to find it.
+    //////////////////////////////////////////////////
+    var printer = abPi.Printer();
+    var printInfo = abPi.PrinterInfo();
+    printInfo.printerModel = abPi.Model.QL_1110NWB;
+    printInfo.printMode = abPi.PrintMode.FIT_TO_PAGE;
+    printInfo.orientation = abPi.Orientation.LANDSCAPE;
+    printInfo.isAutoCut = true;
+    printInfo.port = abPi.Port.BLUETOOTH;
+    // Set the label type.
+    printInfo.labelNameIndex = QL1100.ordinalFromID(QL1100.W29H90.getId());
+
+    // Set the printer info so we can use the SDK to get the printers.
+    await printer.setPrinterInfo(printInfo);
+
+    // Get a list of printers with my model available in the network.
+    List<abPi.BluetoothPrinter> printers = await printer.getBluetoothPrinters([abPi.Model.QL_1110NWB.getName()]);
+
+    if (printers.isEmpty) {
+      // Show a message if no printers are found.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Text("No paired printers found on your device."),
+        ),
+      ));
+      return;
+    }
+    // Get the IP Address from the first printer found.
+    printInfo.macAddress = printers.single.macAddress;
+    printer.setPrinterInfo(printInfo);
+
+    // Print labels one at a time.
+    for (var labelImage in preview) {
+      abPi.PrinterStatus status = await printer.printImage(labelImage);
+    }
   }
 
   bool isValidEntry(String? value) {
@@ -728,10 +935,10 @@ class ContactRowView extends StatelessWidget {
                   children: [
                     Text(
                       customer.nameLine,
-                      style: GoogleFonts.vibur(fontSize: 20),
+                      style: kLabelTextStyle.copyWith(fontSize: 20),
                     ),
-                    Text(customer.streetLine!, style: GoogleFonts.vibur()),
-                    Text(customer.stateLine, style: GoogleFonts.vibur()),
+                    Text(customer.streetLine!, style: kLabelTextStyle),
+                    Text(customer.stateLine, style: kLabelTextStyle),
                   ],
                 ),
               ),
@@ -754,6 +961,48 @@ class ContactRowView extends StatelessWidget {
   }
 }
 
+class OleenAppBar extends StatelessWidget with PreferredSizeWidget, OleenLogo {
+  final String title;
+
+  const OleenAppBar({Key? key, required this.title}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        AppBar(
+          centerTitle:true,
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(60),
+                  bottomRight: Radius.circular(60))),
+          title:
+              Text(title, style: GoogleFonts.loveYaLikeASister(fontSize: 30)),
+        ),
+        Positioned(
+          bottom: -10,
+          child: Center(
+            child: buildAppLogo(width: kToolbarHeight, height: kToolbarHeight),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          bottom: -10,
+          child: Center(
+            child: Transform.scale(
+                scaleX: -1,
+                child: buildAppLogo(
+                    width: kToolbarHeight, height: kToolbarHeight)),
+          ),
+        )
+      ],
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
 class CustomerAddress {
   int? recordId;
   String? firstName;
@@ -774,7 +1023,7 @@ class CustomerAddress {
 
   String get nameLine => "$firstName $lastName";
 
-  String get stateLine => "$city,$state";
+  String get stateLine => "$city, $state";
 
   CustomerAddress copyWidth(
       {int? recordId,
@@ -797,5 +1046,18 @@ class CustomerAddress {
   @override
   String toString() {
     return "$recordId: $nameLine $stateLine";
+  }
+}
+
+mixin OleenLogo {
+  Widget buildAppLogo({required double width, required double height}) {
+    return Container(
+        width: width,
+        height: height,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          image: DecorationImage(
+              image: AssetImage("assets/images/coconut.png"), fit: BoxFit.fill),
+        ));
   }
 }
